@@ -286,6 +286,29 @@
             }
         }
 
+       if (res && res.users) { 
+                globalDb.subscriptions = res.subscriptions || [];
+                globalDb.orders = res.orders || [];
+                
+                renderSubscriptionData();
+                renderAffiliateData();
+                showView('dashboard');
+                
+                // --- AUTO TRIGGER CHECKOUT ---
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('buy') === 'setup') {
+                    // Bersihkan URL agar tidak muncul terus
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    // Panggil pop-up setup
+                    setTimeout(() => { paySetup(); }, 500);
+                }
+                
+            } else {
+                Swal.fire('Error', 'Gagal memuat data dari Database.', 'error');
+                showView('auth');
+            }
+        }
+        
         // RENDER STATUS LANGGANAN
         function renderSubscriptionData() {
             const subContainer = document.getElementById('subscription-content');
@@ -299,7 +322,7 @@
                         <i class="bi bi-exclamation-circle text-gray-400 text-4xl mb-3 block"></i>
                         <h4 class="font-bold text-primary text-lg mb-1">Toko Belum Aktif</h4>
                         <p class="text-sm text-gray-500 mb-4">Anda belum memiliki toko yang aktif atau Anda murni mendaftar sebagai Affiliate.</p>
-                        <a href="https://resto.kliksistem.com" target="_blank" class="bg-primary text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-md hover:bg-gray-800 transition">Buat Toko Sekarang</a>
+                        <button onclick="paySetup()" class="bg-primary text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-md hover:bg-gray-800 transition">Buat Toko Sekarang</button>
                     </div>`;
                 return;
             }
@@ -396,6 +419,47 @@
             });
         }
 
+       // FUNGSI PEMBAYARAN SETUP AWAL (Rp 197.000)
+        function paySetup() {
+            Swal.fire({
+                title: 'Aktivasi Toko Baru',
+                html: `
+                    <div class="text-left text-sm mb-4">Biaya Setup & Langganan Bulan Ke-1: <strong class="text-2xl text-primary block mt-1">Rp 197.000</strong></div>
+                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-4 text-center">
+                        <p class="font-bold text-primary mb-3">Scan QRIS di bawah ini:</p>
+                        <img src="https://i.ibb.co.com/XfXyKvT1/QRIS-klik-Sistem.png" alt="QRIS" class="w-48 h-48 mx-auto border-2 border-slate-200 rounded-xl shadow-sm mb-3 object-contain bg-white">
+                        <div class="border-t border-slate-200 pt-4">
+                            <p class="text-xs text-gray-500 mb-1">Transfer Manual:</p>
+                            <p class="font-black text-primary text-lg">BRI | 310301035876538</p>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true, confirmButtonText: '<i class="bi bi-whatsapp"></i> Konfirmasi Transfer', cancelButtonText: 'Batal', confirmButtonColor: '#25D366', cancelButtonColor: '#64748b'
+            }).then(async (res) => {
+                if (res.isConfirmed) {
+                    Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    
+                    const invoiceNum = "STP-" + Date.now().toString().slice(-4);
+                    const orderData = { 
+                        order_id: invoiceNum, user_id: currentUser.id, sub_id: "", order_type: "Setup", 
+                        total_amount: 197000, payment_status: "Pending", affiliate_code: currentUser.affiliate_code, 
+                        commission_amount: 0, created_at: new Date().toISOString().split('T')[0] 
+                    };
+                    
+                    const response = await fetchAPI('saveOrder', { orderData: orderData });
+                    if(response.success) {
+                        Swal.fire({ title: 'Pesanan Dibuat!', text: 'Kirimkan bukti transfer ke WA Admin.', icon: 'success' })
+                        .then(() => {
+                            const waText = `Halo Admin, saya sudah transfer *Rp 197.000* untuk Setup klikResto. Tagihan: *${invoiceNum}*. Berikut bukti transfernya.`;
+                            window.open(`https://api.whatsapp.com/send?phone=6281328307335&text=${waText}`, '_blank');
+                        });
+                    } else {
+                        Swal.fire('Error', response.message, 'error');
+                    }
+                }
+            });
+        }
+        
         // FUNGSI TARIK KOMISI
         function requestPayout() {
             const balanceText = document.getElementById('wallet-balance').innerText;
