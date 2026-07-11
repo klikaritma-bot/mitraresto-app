@@ -158,16 +158,13 @@
     </div>
 
     <script>
-        // ⚠️ MASUKKAN URL GOOGLE APPS SCRIPT ANDA DI SINI
         const API_URL = 'https://script.google.com/macros/s/AKfycbwlsYJRnCFa9SSYF5CXgzXWBffIALTNGtTcxTdwJ8y3LK53kyoMI5uabckjm12Z4IWBvw/exec';
         
         let currentUser = null;
         let globalDb = { subscriptions: [], orders: [] };
 
-        // Format Uang Rupiah
         const formatRp = (angka) => "Rp " + new Intl.NumberFormat('id-ID').format(angka);
 
-        // API CALLER
         async function fetchAPI(action, payload = {}) {
             try {
                 const res = await fetch(API_URL, {
@@ -181,7 +178,6 @@
             }
         }
 
-        // INIT APLIKASI
         window.onload = async () => {
             const savedSession = localStorage.getItem('mitraresto_session');
             if (savedSession) {
@@ -192,7 +188,6 @@
             }
         }
 
-        // TAMPILAN CONTROLLER
         function showView(viewId) {
             document.getElementById('loader').classList.add('hide');
             document.getElementById('view-auth').classList.add('hide');
@@ -214,7 +209,6 @@
             }
         }
 
-        // PROSES AUTH
         async function handleLogin(e) {
             e.preventDefault();
             Swal.fire({title: 'Memeriksa...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
@@ -264,7 +258,6 @@
             showView('auth');
         }
 
-        // LOAD DATA DASHBOARD
         async function loadDashboardData() {
             document.getElementById('loader').classList.remove('hide');
             document.getElementById('user-greeting').innerText = `Halo, ${currentUser.fullname.split(' ')[0]}`;
@@ -273,20 +266,9 @@
             document.getElementById('ref-link').value = `https://resto.kliksistem.com/?ref=${currentUser.affiliate_code}`;
 
             const res = await fetchAPI('getAllData');
-            if (res && res.users) { // Pastikan data terambil
-                globalDb.subscriptions = res.subscriptions || [];
-                globalDb.orders = res.orders || [];
-                
-                renderSubscriptionData();
-                renderAffiliateData();
-                showView('dashboard');
-            } else {
-                Swal.fire('Error', 'Gagal memuat data dari Database.', 'error');
-                showView('auth');
-            }
-        }
-
-       if (res && res.users) { 
+            
+            // BLOK IF YANG SUDAH DIBERSIHKAN
+            if (res && res.users) { 
                 globalDb.subscriptions = res.subscriptions || [];
                 globalDb.orders = res.orders || [];
                 
@@ -294,13 +276,13 @@
                 renderAffiliateData();
                 showView('dashboard');
                 
-                // --- AUTO TRIGGER CHECKOUT ---
+                // --- AUTO TRIGGER CHECKOUT (Menunggu Dashboard Tampil) ---
                 const urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.get('buy') === 'setup') {
-                    // Bersihkan URL agar tidak muncul terus
+                    // Bersihkan URL agar pop-up tidak muncul terus saat web direfresh
                     window.history.replaceState({}, document.title, window.location.pathname);
                     // Panggil pop-up setup
-                    setTimeout(() => { paySetup(); }, 500);
+                    setTimeout(() => { paySetup(); }, 600);
                 }
                 
             } else {
@@ -309,11 +291,8 @@
             }
         }
         
-        // RENDER STATUS LANGGANAN
         function renderSubscriptionData() {
             const subContainer = document.getElementById('subscription-content');
-            
-            // Cari data langganan milik user yang sedang login
             const mySub = globalDb.subscriptions.find(s => s.user_id === currentUser.id);
 
             if (!mySub) {
@@ -327,7 +306,6 @@
                 return;
             }
 
-            // Tentukan Badge Status
             let statusBadge = '';
             if(mySub.status === 'Active') statusBadge = '<span class="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-full text-xs">Aktif</span>';
             else if(mySub.status === 'Suspended') statusBadge = '<span class="bg-red-100 text-red-700 font-bold px-3 py-1 rounded-full text-xs">Ditangguhkan (Belum Bayar)</span>';
@@ -356,21 +334,13 @@
             `;
         }
 
-        // RENDER DATA KOMISI
         function renderAffiliateData() {
-            // Hitung total komisi dari tabel Orders (di mana affiliate_code = kode user DAN payment_status = Paid)
             const myReferrals = globalDb.orders.filter(o => o.affiliate_code === currentUser.affiliate_code && o.payment_status === 'Paid');
-            
             let totalCommission = 0;
-            myReferrals.forEach(o => {
-                totalCommission += parseInt(o.commission_amount) || 0;
-            });
-
-            // Asumsi kasar untuk UI: Kita langsung tampilkan total (Belum dikurangi Payout, karena untuk simple MVP)
+            myReferrals.forEach(o => { totalCommission += parseInt(o.commission_amount) || 0; });
             document.getElementById('wallet-balance').innerText = formatRp(totalCommission);
         }
 
-        // FUNGSI COPY LINK
         function copyRefLink() {
             const link = document.getElementById('ref-link');
             link.select();
@@ -378,7 +348,6 @@
             Swal.fire({icon: 'success', title: 'Tersalin', text: 'Link promosi siap disebar ke WhatsApp / IG!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000});
         }
 
-        // FUNGSI PEMBAYARAN PERPANJANGAN (QRIS)
         function payRenewal(subId) {
             Swal.fire({
                 title: 'Perpanjangan Sistem',
@@ -419,7 +388,6 @@
             });
         }
 
-       // FUNGSI PEMBAYARAN SETUP AWAL (Rp 197.000)
         function paySetup() {
             Swal.fire({
                 title: 'Aktivasi Toko Baru',
@@ -460,7 +428,6 @@
             });
         }
         
-        // FUNGSI TARIK KOMISI
         function requestPayout() {
             const balanceText = document.getElementById('wallet-balance').innerText;
             if(balanceText === "Rp 0") {
