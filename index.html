@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MitraResto | Pusat Billing & Kemitraan klikResto</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'], },
+                    colors: { primary: '#102A51', brand: '#BA1E2D', secondary: '#f8fafc' }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; color: #0f172a; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .hide { display: none !important; }
+        #loader { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <div id="loader">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-brand mb-4"></div>
+        <div class="text-primary font-bold tracking-wide">Menghubungkan ke Server...</div>
+    </div>
+
+    <div id="view-auth" class="flex-grow flex items-center justify-center p-4 hide relative overflow-hidden bg-primary">
+        <div class="absolute top-0 right-0 w-96 h-96 bg-brand opacity-20 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
+        <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-500 opacity-20 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2"></div>
+
+        <div class="w-full max-w-md bg-white rounded-[2rem] shadow-2xl p-8 relative z-10">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center gap-2 mb-2">
+                    <i class="bi bi-shop-window text-brand text-3xl"></i>
+                    <span class="font-extrabold text-3xl tracking-tight text-primary">Mitra<span class="text-brand">Resto</span></span>
+                </div>
+                <p class="text-gray-500 text-sm font-medium">Portal Kemitraan & Tagihan Pelanggan</p>
+            </div>
+
+            <div class="flex gap-2 mb-6 bg-slate-100 p-1.5 rounded-xl">
+                <button id="btn-tab-login" onclick="switchAuthTab('login')" class="w-1/2 py-2.5 rounded-lg font-bold text-sm bg-white text-primary shadow-sm transition">Masuk</button>
+                <button id="btn-tab-register" onclick="switchAuthTab('register')" class="w-1/2 py-2.5 rounded-lg font-bold text-sm text-gray-500 hover:text-gray-700 transition">Daftar Partner</button>
+            </div>
+
+            <form id="form-login" onsubmit="handleLogin(event)">
+                <div class="mb-4">
+                    <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Email Akun</label>
+                    <input type="email" id="log-email" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium transition">
+                </div>
+                <div class="mb-6">
+                    <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Kata Sandi</label>
+                    <input type="password" id="log-pass" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium transition">
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-4 rounded-xl font-bold hover:bg-gray-800 shadow-lg shadow-blue-900/20 transition">Masuk ke Dashboard</button>
+            </form>
+
+            <form id="form-register" onsubmit="handleRegister(event)" class="hide">
+                <div class="mb-4">
+                    <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Nama Lengkap / Nama Resto</label>
+                    <input type="text" id="reg-name" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium">
+                </div>
+                <div class="mb-4">
+                    <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Email Valid</label>
+                    <input type="email" id="reg-email" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium">
+                </div>
+                <div class="mb-6">
+                    <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Buat Sandi</label>
+                    <input type="password" id="reg-pass" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium">
+                </div>
+                <button type="submit" class="w-full bg-brand text-white py-4 rounded-xl font-bold hover:brightness-110 shadow-lg shadow-red-500/30 transition">Daftar Sekarang</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="view-dashboard" class="flex-grow flex-col hide">
+        
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="bi bi-shop-window text-brand text-2xl"></i>
+                    <span class="font-bold text-xl text-primary tracking-tight">Mitra<span class="text-brand">Resto</span></span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span id="user-greeting" class="font-bold text-sm text-primary hidden sm:block">Halo, Partner</span>
+                    <button onclick="logout()" class="bg-red-50 text-brand px-4 py-1.5 rounded-lg text-sm font-bold border border-red-100 hover:bg-brand hover:text-white transition">Keluar</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+            
+            <div class="bg-gradient-to-r from-brand to-red-500 rounded-2xl p-6 text-white mb-8 shadow-lg shadow-red-500/20 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="absolute -right-10 -top-10 text-white/10 text-9xl">
+                    <i class="bi bi-megaphone-fill"></i>
+                </div>
+                <div class="relative z-10">
+                    <span class="bg-white text-brand text-[10px] font-black uppercase px-2.5 py-1 rounded-full mb-2 inline-block tracking-wider">Promo Spesial</span>
+                    <h2 class="text-2xl font-extrabold mb-1">Ajak 1 Teman = Gratis Langganan 1 Bulan!</h2>
+                    <p class="text-red-100 text-sm font-medium">Anda dapat komisi <b>Rp 100.000</b> langsung untuk setiap resto yang mendaftar melalui link afiliasi Anda di bawah.</p>
+                </div>
+                <button onclick="document.getElementById('affiliate-section').scrollIntoView({behavior:'smooth'})" class="relative z-10 bg-white text-brand px-6 py-3 rounded-xl font-bold whitespace-nowrap hover:bg-gray-50 shadow-md">Ambil Link Promo</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <div class="lg:col-span-7 space-y-6">
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+                        <div class="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                            <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600"><i class="bi bi-rocket-takeoff-fill text-xl"></i></div>
+                            <h3 class="text-xl font-bold text-primary">Sistem Operasional Resto</h3>
+                        </div>
+                        
+                        <div id="subscription-content">
+                            <div class="text-center py-10">
+                                <p class="text-gray-400 font-medium mb-4">Mencari data langganan...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="affiliate-section" class="lg:col-span-5 space-y-6">
+                    <div class="bg-primary rounded-3xl p-6 shadow-xl text-white border border-gray-800">
+                        <h3 class="text-xl font-bold mb-1">Dompet Mitra</h3>
+                        <p class="text-gray-400 text-xs mb-6 font-medium">Komisi Rp 100rb / Setup Toko Baru.</p>
+                        
+                        <div class="bg-slate-800/50 rounded-2xl p-5 border border-white/5 mb-6">
+                            <p class="text-gray-400 font-bold text-[10px] uppercase tracking-wider mb-1">Saldo Tersedia</p>
+                            <h4 id="wallet-balance" class="text-4xl font-black text-brand mb-4">Rp 0</h4>
+                            <button onclick="requestPayout()" class="w-full bg-white text-primary py-3 rounded-xl font-bold hover:bg-gray-100 transition shadow-md flex justify-center items-center gap-2">
+                                <i class="bi bi-wallet2"></i> Tarik Saldo via WA
+                            </button>
+                        </div>
+
+                        <div class="border-t border-white/10 pt-5">
+                            <p class="text-gray-300 font-bold text-xs uppercase tracking-wider mb-3">Link Promosi Anda</p>
+                            <div class="flex gap-2">
+                                <input type="text" id="ref-link" readonly class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-sm text-brand font-mono outline-none" value="Memuat...">
+                                <button onclick="copyRefLink()" class="bg-brand text-white px-4 py-2 rounded-xl hover:brightness-110 transition"><i class="bi bi-copy"></i></button>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-3 leading-relaxed">Bagikan link ini ke pengusaha kuliner. Cookies tersimpan otomatis, komisi masuk saat mereka membayar biaya setup.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ⚠️ MASUKKAN URL GOOGLE APPS SCRIPT ANDA DI SINI
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwlsYJRnCFa9SSYF5CXgzXWBffIALTNGtTcxTdwJ8y3LK53kyoMI5uabckjm12Z4IWBvw/exec';
+        
+        let currentUser = null;
+        let globalDb = { subscriptions: [], orders: [] };
+
+        // Format Uang Rupiah
+        const formatRp = (angka) => "Rp " + new Intl.NumberFormat('id-ID').format(angka);
+
+        // API CALLER
+        async function fetchAPI(action, payload = {}) {
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action, ...payload })
+                });
+                return await res.json();
+            } catch (err) {
+                console.error("API Error:", err);
+                return { success: false, message: "Gagal terhubung ke server Database." };
+            }
+        }
+
+        // INIT APLIKASI
+        window.onload = async () => {
+            const savedSession = localStorage.getItem('mitraresto_session');
+            if (savedSession) {
+                currentUser = JSON.parse(savedSession);
+                await loadDashboardData();
+            } else {
+                showView('auth');
+            }
+        }
+
+        // TAMPILAN CONTROLLER
+        function showView(viewId) {
+            document.getElementById('loader').classList.add('hide');
+            document.getElementById('view-auth').classList.add('hide');
+            document.getElementById('view-dashboard').classList.add('hide');
+            document.getElementById('view-' + viewId).classList.remove('hide');
+        }
+
+        function switchAuthTab(tab) {
+            const btnLogin = document.getElementById('btn-tab-login');
+            const btnReg = document.getElementById('btn-tab-register');
+            if(tab === 'login') {
+                document.getElementById('form-login').classList.remove('hide'); document.getElementById('form-register').classList.add('hide');
+                btnLogin.className = "w-1/2 py-2.5 rounded-lg font-bold text-sm bg-white text-primary shadow-sm transition";
+                btnReg.className = "w-1/2 py-2.5 rounded-lg font-bold text-sm text-gray-500 hover:text-gray-700 transition bg-slate-100";
+            } else {
+                document.getElementById('form-register').classList.remove('hide'); document.getElementById('form-login').classList.add('hide');
+                btnReg.className = "w-1/2 py-2.5 rounded-lg font-bold text-sm bg-white text-primary shadow-sm transition";
+                btnLogin.className = "w-1/2 py-2.5 rounded-lg font-bold text-sm text-gray-500 hover:text-gray-700 transition bg-slate-100";
+            }
+        }
+
+        // PROSES AUTH
+        async function handleLogin(e) {
+            e.preventDefault();
+            Swal.fire({title: 'Memeriksa...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+            
+            const email = document.getElementById('log-email').value;
+            const pass = document.getElementById('log-pass').value;
+            
+            const res = await fetchAPI('login', { email: email, password: pass });
+            if (res.success) {
+                currentUser = res.user;
+                localStorage.setItem('mitraresto_session', JSON.stringify(currentUser));
+                Swal.close();
+                await loadDashboardData();
+            } else {
+                Swal.fire('Login Gagal', res.message, 'error');
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            Swal.fire({title: 'Mendaftarkan Akun...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+            
+            const userData = {
+                id: "USR-" + Date.now().toString().slice(-4),
+                fullname: document.getElementById('reg-name').value,
+                email: document.getElementById('reg-email').value,
+                password: document.getElementById('reg-pass').value,
+                affiliate_code: "RESTO-" + Date.now().toString().slice(-4),
+                role: "User",
+                created_at: new Date().toISOString().split('T')[0]
+            };
+            
+            const res = await fetchAPI('register', { userData: userData });
+            if (res.success) {
+                currentUser = res.user;
+                localStorage.setItem('mitraresto_session', JSON.stringify(currentUser));
+                Swal.close();
+                await loadDashboardData();
+            } else {
+                Swal.fire('Pendaftaran Gagal', res.message, 'error');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('mitraresto_session');
+            currentUser = null;
+            showView('auth');
+        }
+
+        // LOAD DATA DASHBOARD
+        async function loadDashboardData() {
+            document.getElementById('loader').classList.remove('hide');
+            document.getElementById('user-greeting').innerText = `Halo, ${currentUser.fullname.split(' ')[0]}`;
+            
+            // Set Affiliate Link
+            document.getElementById('ref-link').value = `https://resto.kliksistem.com/?ref=${currentUser.affiliate_code}`;
+
+            const res = await fetchAPI('getAllData');
+            if (res && res.users) { // Pastikan data terambil
+                globalDb.subscriptions = res.subscriptions || [];
+                globalDb.orders = res.orders || [];
+                
+                renderSubscriptionData();
+                renderAffiliateData();
+                showView('dashboard');
+            } else {
+                Swal.fire('Error', 'Gagal memuat data dari Database.', 'error');
+                showView('auth');
+            }
+        }
+
+        // RENDER STATUS LANGGANAN
+        function renderSubscriptionData() {
+            const subContainer = document.getElementById('subscription-content');
+            
+            // Cari data langganan milik user yang sedang login
+            const mySub = globalDb.subscriptions.find(s => s.user_id === currentUser.id);
+
+            if (!mySub) {
+                subContainer.innerHTML = `
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center">
+                        <i class="bi bi-exclamation-circle text-gray-400 text-4xl mb-3 block"></i>
+                        <h4 class="font-bold text-primary text-lg mb-1">Toko Belum Aktif</h4>
+                        <p class="text-sm text-gray-500 mb-4">Anda belum memiliki toko yang aktif atau Anda murni mendaftar sebagai Affiliate.</p>
+                        <a href="https://resto.kliksistem.com" target="_blank" class="bg-primary text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-md hover:bg-gray-800 transition">Buat Toko Sekarang</a>
+                    </div>`;
+                return;
+            }
+
+            // Tentukan Badge Status
+            let statusBadge = '';
+            if(mySub.status === 'Active') statusBadge = '<span class="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-full text-xs">Aktif</span>';
+            else if(mySub.status === 'Suspended') statusBadge = '<span class="bg-red-100 text-red-700 font-bold px-3 py-1 rounded-full text-xs">Ditangguhkan (Belum Bayar)</span>';
+            else statusBadge = `<span class="bg-yellow-100 text-yellow-700 font-bold px-3 py-1 rounded-full text-xs">${mySub.status}</span>`;
+
+            subContainer.innerHTML = `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Nama Usaha</p>
+                        <h4 class="font-black text-primary text-2xl">${mySub.resto_name}</h4>
+                        <a href="https://${mySub.subdomain}" target="_blank" class="text-blue-500 text-sm hover:underline font-medium"><i class="bi bi-link-45deg"></i> ${mySub.subdomain}</a>
+                    </div>
+                    <div>${statusBadge}</div>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-5 border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div>
+                        <p class="text-xs text-gray-500 font-bold uppercase mb-1">Jatuh Tempo Pembayaran</p>
+                        <p class="font-black text-lg text-primary">${mySub.next_billing_date ? mySub.next_billing_date.substring(0,10) : '-'}</p>
+                    </div>
+                    <button onclick="payRenewal('${mySub.sub_id}')" class="w-full sm:w-auto bg-brand text-white px-6 py-3 rounded-xl font-bold shadow-md hover:brightness-110 transition shadow-red-500/20">
+                        Bayar Tagihan (Rp 77rb)
+                    </button>
+                </div>
+                <p class="text-[11px] text-gray-400 mt-3 text-center sm:text-left">* Tagihan diabaikan jika masa tenggang lewat 7 hari, web otomatis di-suspend.</p>
+            `;
+        }
+
+        // RENDER DATA KOMISI
+        function renderAffiliateData() {
+            // Hitung total komisi dari tabel Orders (di mana affiliate_code = kode user DAN payment_status = Paid)
+            const myReferrals = globalDb.orders.filter(o => o.affiliate_code === currentUser.affiliate_code && o.payment_status === 'Paid');
+            
+            let totalCommission = 0;
+            myReferrals.forEach(o => {
+                totalCommission += parseInt(o.commission_amount) || 0;
+            });
+
+            // Asumsi kasar untuk UI: Kita langsung tampilkan total (Belum dikurangi Payout, karena untuk simple MVP)
+            document.getElementById('wallet-balance').innerText = formatRp(totalCommission);
+        }
+
+        // FUNGSI COPY LINK
+        function copyRefLink() {
+            const link = document.getElementById('ref-link');
+            link.select();
+            document.execCommand("copy");
+            Swal.fire({icon: 'success', title: 'Tersalin', text: 'Link promosi siap disebar ke WhatsApp / IG!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000});
+        }
+
+        // FUNGSI PEMBAYARAN PERPANJANGAN (QRIS)
+        function payRenewal(subId) {
+            Swal.fire({
+                title: 'Perpanjangan Sistem',
+                html: `
+                    <div class="text-left text-sm mb-4">Tagihan Bulanan: <strong class="text-2xl text-primary block mt-1">Rp 77.000</strong></div>
+                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-4 text-center">
+                        <p class="font-bold text-primary mb-3">Scan QRIS di bawah ini:</p>
+                        <img src="https://i.ibb.co.com/XfXyKvT1/QRIS-klik-Sistem.png" alt="QRIS" class="w-48 h-48 mx-auto border-2 border-slate-200 rounded-xl shadow-sm mb-3 object-contain bg-white">
+                        <div class="border-t border-slate-200 pt-4">
+                            <p class="text-xs text-gray-500 mb-1">Transfer Manual:</p>
+                            <p class="font-black text-primary text-lg">BRI | 310301035876538</p>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true, confirmButtonText: '<i class="bi bi-whatsapp"></i> Konfirmasi Transfer', cancelButtonText: 'Batal', confirmButtonColor: '#25D366', cancelButtonColor: '#64748b'
+            }).then(async (res) => {
+                if (res.isConfirmed) {
+                    Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    
+                    const invoiceNum = "RNW-" + Date.now().toString().slice(-4);
+                    const orderData = { 
+                        order_id: invoiceNum, user_id: currentUser.id, sub_id: subId, order_type: "Renewal", 
+                        total_amount: 77000, payment_status: "Pending", affiliate_code: "", 
+                        commission_amount: 0, created_at: new Date().toISOString().split('T')[0] 
+                    };
+                    
+                    const response = await fetchAPI('saveOrder', { orderData: orderData });
+                    if(response.success) {
+                        Swal.fire({ title: 'Pesanan Dibuat!', text: 'Kirimkan bukti transfer ke WA Admin agar masa aktif Anda segera diperpanjang.', icon: 'success' })
+                        .then(() => {
+                            const waText = `Halo Admin, saya sudah transfer *Rp 77.000* untuk perpanjangan klikResto. Tagihan: *${invoiceNum}*. Berikut bukti transfernya.`;
+                            window.open(`https://api.whatsapp.com/send?phone=6281328307335&text=${waText}`, '_blank');
+                        });
+                    } else {
+                        Swal.fire('Error', response.message, 'error');
+                    }
+                }
+            });
+        }
+
+        // FUNGSI TARIK KOMISI
+        function requestPayout() {
+            const balanceText = document.getElementById('wallet-balance').innerText;
+            if(balanceText === "Rp 0") {
+                return Swal.fire('Oops', 'Saldo komisi Anda belum mencukupi.', 'warning');
+            }
+            
+            const waText = `Halo Admin klikSistem,%0A%0ASaya ingin mencairkan komisi Afiliasi klikResto.%0A*Nama:* ${currentUser.fullname}%0A*Kode Partner:* ${currentUser.affiliate_code}%0A*Total Saldo:* ${balanceText}%0A%0AMohon arahannya untuk proses pencairan.`;
+            window.open(`https://api.whatsapp.com/send?phone=6281328307335&text=${waText}`, '_blank');
+        }
+    </script>
+</body>
+</html>
