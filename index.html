@@ -179,6 +179,13 @@
         }
 
         window.onload = async () => {
+            // 1. TANGKAP KODE AFFILIATE DARI URL (JIKA ADA)
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('ref')) {
+                localStorage.setItem('mitraresto_ref', urlParams.get('ref'));
+            }
+
+            // 2. CEK SESI LOGIN
             const savedSession = localStorage.getItem('mitraresto_session');
             if (savedSession) {
                 currentUser = JSON.parse(savedSession);
@@ -367,11 +374,20 @@
                 if (res.isConfirmed) {
                     Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                     
-                    const invoiceNum = "RNW-" + Date.now().toString().slice(-4);
+                    const invoiceNum = "STP-" + Date.now().toString().slice(-4);
                     const orderData = { 
-                        order_id: invoiceNum, user_id: currentUser.id, sub_id: subId, order_type: "Renewal", 
-                        total_amount: 77000, payment_status: "Pending", affiliate_code: "", 
-                        commission_amount: 0, created_at: new Date().toISOString().split('T')[0] 
+                        order_id: invoiceNum, 
+                        user_id: currentUser.id, 
+                        sub_id: "", 
+                        order_type: "Setup", 
+                        total_amount: 99000, 
+                        payment_status: "Pending", 
+                        
+                        // KUNCI PERBAIKAN: Mengambil kode dari memori, BUKAN dari currentUser
+                        affiliate_code: localStorage.getItem('mitraresto_ref') || "", 
+                        
+                        commission_amount: 0, 
+                        created_at: new Date().toISOString().split('T')[0] 
                     };
                     
                     const response = await fetchAPI('saveOrder', { orderData: orderData });
