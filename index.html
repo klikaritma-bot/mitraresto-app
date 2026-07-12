@@ -278,6 +278,7 @@
             if (res && res.users) { 
                 globalDb.subscriptions = res.subscriptions || [];
                 globalDb.orders = res.orders || [];
+                globalDb.payouts = res.payouts || [];
                 
                 renderSubscriptionData();
                 renderAffiliateData();
@@ -342,10 +343,21 @@
         }
 
         function renderAffiliateData() {
+            // 1. Hitung Uang Masuk (Dari Penjualan)
             const myReferrals = globalDb.orders.filter(o => o.affiliate_code === currentUser.affiliate_code && o.payment_status === 'Paid');
             let totalCommission = 0;
             myReferrals.forEach(o => { totalCommission += parseInt(o.commission_amount) || 0; });
-            document.getElementById('wallet-balance').innerText = formatRp(totalCommission);
+
+            // 2. Hitung Uang Keluar (Dari Penarikan di tab Payouts)
+            let totalWithdrawn = 0;
+            if (globalDb.payouts) {
+                const myPayouts = globalDb.payouts.filter(p => p.user_id === currentUser.id && p.status === 'Completed');
+                myPayouts.forEach(p => { totalWithdrawn += parseInt(p.amount) || 0; });
+            }
+
+            // 3. Kurangi dan Tampilkan Saldo Akhir
+            const finalBalance = totalCommission - totalWithdrawn;
+            document.getElementById('wallet-balance').innerText = formatRp(finalBalance);
         }
 
         function copyRefLink() {
@@ -383,7 +395,7 @@
                         total_amount: 99000, 
                         payment_status: "Pending", 
                         
-                        // KUNCI PERBAIKAN: Mengambil kode dari memori, BUKAN dari currentUser
+                        // KUNCI PERBAIKAN: Harus pakai localStorage, bukan currentUser
                         affiliate_code: localStorage.getItem('mitraresto_ref') || "", 
                         
                         commission_amount: 0, 
