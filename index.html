@@ -158,10 +158,11 @@
     </div>
 
     <script>
+        // ⚠️ MASUKKAN URL GOOGLE APPS SCRIPT ANDA DI SINI
         const API_URL = 'https://script.google.com/macros/s/AKfycbwlsYJRnCFa9SSYF5CXgzXWBffIALTNGtTcxTdwJ8y3LK53kyoMI5uabckjm12Z4IWBvw/exec';
         
         let currentUser = null;
-        let globalDb = { subscriptions: [], orders: [] };
+        let globalDb = { subscriptions: [], orders: [], payouts: [] };
 
         const formatRp = (angka) => "Rp " + new Intl.NumberFormat('id-ID').format(angka);
 
@@ -179,13 +180,14 @@
         }
 
         window.onload = async () => {
-            // 1. TANGKAP KODE AFFILIATE DARI URL (JIKA ADA)
+            // TANGKAP DAN SIMPAN KODE REFERAL KE MEMORI BROWSER
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('ref')) {
-                localStorage.setItem('mitraresto_ref', urlParams.get('ref'));
+            const refCode = urlParams.get('ref');
+            if (refCode) {
+                localStorage.setItem('mitraresto_ref', refCode);
+                console.log("Kode referal ditangkap:", refCode); // Untuk debugging
             }
 
-            // 2. CEK SESI LOGIN
             const savedSession = localStorage.getItem('mitraresto_session');
             if (savedSession) {
                 currentUser = JSON.parse(savedSession);
@@ -269,27 +271,23 @@
             document.getElementById('loader').classList.remove('hide');
             document.getElementById('user-greeting').innerText = `Halo, ${currentUser.fullname.split(' ')[0]}`;
             
-            // Set Affiliate Link
             document.getElementById('ref-link').value = `https://resto.kliksistem.com/?ref=${currentUser.affiliate_code}`;
 
             const res = await fetchAPI('getAllData');
             
-            // BLOK IF YANG SUDAH DIBERSIHKAN
             if (res && res.users) { 
                 globalDb.subscriptions = res.subscriptions || [];
                 globalDb.orders = res.orders || [];
-                globalDb.payouts = res.payouts || [];
+                globalDb.payouts = res.payouts || []; // Menambahkan data Payouts
                 
                 renderSubscriptionData();
                 renderAffiliateData();
                 showView('dashboard');
                 
-                // --- AUTO TRIGGER CHECKOUT (Menunggu Dashboard Tampil) ---
+                // AUTO TRIGGER CHECKOUT
                 const urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.get('buy') === 'setup') {
-                    // Bersihkan URL agar pop-up tidak muncul terus saat web direfresh
                     window.history.replaceState({}, document.title, window.location.pathname);
-                    // Panggil pop-up setup
                     setTimeout(() => { paySetup(); }, 600);
                 }
                 
@@ -342,8 +340,9 @@
             `;
         }
 
+        // LOGIKA PERHITUNGAN DOMPET MITRA YANG BENAR
         function renderAffiliateData() {
-            // 1. Hitung Uang Masuk (Dari Penjualan)
+            // 1. Hitung Uang Masuk (Dari Penjualan yg sudah Paid)
             const myReferrals = globalDb.orders.filter(o => o.affiliate_code === currentUser.affiliate_code && o.payment_status === 'Paid');
             let totalCommission = 0;
             myReferrals.forEach(o => { totalCommission += parseInt(o.commission_amount) || 0; });
@@ -386,20 +385,11 @@
                 if (res.isConfirmed) {
                     Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                     
-                    const invoiceNum = "STP-" + Date.now().toString().slice(-4);
+                    const invoiceNum = "RNW-" + Date.now().toString().slice(-4);
                     const orderData = { 
-                        order_id: invoiceNum, 
-                        user_id: currentUser.id, 
-                        sub_id: "", 
-                        order_type: "Setup", 
-                        total_amount: 99000, 
-                        payment_status: "Pending", 
-                        
-                        // KUNCI PERBAIKAN: Harus pakai localStorage, bukan currentUser
-                        affiliate_code: localStorage.getItem('mitraresto_ref') || "", 
-                        
-                        commission_amount: 0, 
-                        created_at: new Date().toISOString().split('T')[0] 
+                        order_id: invoiceNum, user_id: currentUser.id, sub_id: subId, order_type: "Renewal", 
+                        total_amount: 77000, payment_status: "Pending", affiliate_code: "", 
+                        commission_amount: 0, created_at: new Date().toISOString().split('T')[0] 
                     };
                     
                     const response = await fetchAPI('saveOrder', { orderData: orderData });
@@ -416,12 +406,11 @@
             });
         }
 
-        // FUNGSI PEMBAYARAN SETUP AWAL (PROMO Rp 99.000)
         function paySetup() {
             Swal.fire({
                 title: 'Aktivasi Toko Baru',
                 html: `
-                    <div class="text-left text-sm mb-4">Promo Setup & Langganan Bln Ke-1: <strong class="text-2xl text-primary block mt-1">Rp 99.000</strong></div>
+                    <div class="text-left text-sm mb-4">Biaya Setup & Langganan Bulan Ke-1: <strong class="text-2xl text-primary block mt-1">Rp 99.000</strong></div>
                     <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-4 text-center">
                         <p class="font-bold text-primary mb-3">Scan QRIS di bawah ini:</p>
                         <img src="https://i.ibb.co.com/XfXyKvT1/QRIS-klik-Sistem.png" alt="QRIS" class="w-48 h-48 mx-auto border-2 border-slate-200 rounded-xl shadow-sm mb-3 object-contain bg-white">
@@ -436,21 +425,27 @@
                 if (res.isConfirmed) {
                     Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                     
+                    // AMBIL KODE DARI MEMORI
+                    const storedRef = localStorage.getItem('mitraresto_ref');
+
                     const invoiceNum = "STP-" + Date.now().toString().slice(-4);
                     const orderData = { 
-                        order_id: invoiceNum, user_id: currentUser.id, sub_id: "", order_type: "Setup", 
-                        
-                        // PERUBAHAN: Angka total yang dikirim ke Database menjadi 99000
-                        total_amount: 99000, payment_status: "Pending", affiliate_code: currentUser.affiliate_code, 
-                        commission_amount: 0, created_at: new Date().toISOString().split('T')[0] 
+                        order_id: invoiceNum, 
+                        user_id: currentUser.id, 
+                        sub_id: "", 
+                        order_type: "Setup", 
+                        total_amount: 99000, 
+                        payment_status: "Pending", 
+                        affiliate_code: storedRef ? storedRef : "", // LOGIKA YANG BENAR
+                        commission_amount: 0, 
+                        created_at: new Date().toISOString().split('T')[0] 
                     };
                     
                     const response = await fetchAPI('saveOrder', { orderData: orderData });
                     if(response.success) {
                         Swal.fire({ title: 'Pesanan Dibuat!', text: 'Kirimkan bukti transfer ke WA Admin.', icon: 'success' })
                         .then(() => {
-                            // PERUBAHAN: Teks otomatis ke WA menjadi Rp 99.000
-                            const waText = `Halo Admin, saya sudah transfer *Rp 99.000* untuk Promo Setup klikResto. Tagihan: *${invoiceNum}*. Berikut bukti transfernya.`;
+                            const waText = `Halo Admin, saya sudah transfer *Rp 99.000* untuk Setup klikResto. Tagihan: *${invoiceNum}*. Berikut bukti transfernya.`;
                             window.open(`https://api.whatsapp.com/send?phone=6281328307335&text=${waText}`, '_blank');
                         });
                     } else {
