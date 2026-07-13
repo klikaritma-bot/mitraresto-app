@@ -184,18 +184,40 @@
         }
 
         // =========================================================
-        // PENANGKAP REFERAL YANG LEBIH KUAT
+        // COOKIE HELPER (LINTAS SUBDOMAIN *.kliksistem.com)
+        // =========================================================
+        // PENTING: localStorage terkunci per-domain (origin-scoped), jadi
+        // referral yang ditangkap di resto.kliksistem.com TIDAK bisa dibaca
+        // di mitraresto.kliksistem.com. Cookie dengan domain=.kliksistem.com
+        // bisa dibaca oleh SEMUA subdomain kliksistem.com.
+        function setCookie(name, value, days) {
+            const expires = new Date(Date.now() + days * 864e5).toUTCString();
+            document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; domain=.kliksistem.com; SameSite=Lax; Secure`;
+        }
+
+        function getCookie(name) {
+            const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+            return match ? decodeURIComponent(match[1]) : null;
+        }
+
+        function deleteCookie(name) {
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.kliksistem.com`;
+        }
+
+        // =========================================================
+        // PENANGKAP REFERAL YANG LEBIH KUAT (COOKIE LINTAS SUBDOMAIN)
         // =========================================================
         function captureReferral() {
             const urlParams = new URLSearchParams(window.location.search);
             const refCode = urlParams.get('ref');
             
-            // Simpan ke localStorage hanya jika ada parameter ref
+            // Simpan ke cookie (lintas subdomain) + localStorage (fallback same-origin)
             if (refCode) {
+                setCookie('mitraresto_ref', refCode, 30);
                 localStorage.setItem('mitraresto_ref', refCode);
-                console.log("Referal ditangkap dan disimpan:", refCode);
+                console.log("Referal ditangkap dan disimpan (cookie + localStorage):", refCode);
             } else {
-                console.log("Tidak ada referal di URL.");
+                console.log("Tidak ada referal baru di URL. Cek cookie/localStorage yang sudah ada.");
             }
         }
 
@@ -467,14 +489,11 @@
                 if (res.isConfirmed) {
                     Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                     
-                    // Ambil referal dari Local Storage
-                    let storedRef = localStorage.getItem('mitraresto_ref');
+                    // Ambil referal: prioritas cookie (lintas subdomain), lalu localStorage (same-origin)
+                    let storedRef = getCookie('mitraresto_ref') || localStorage.getItem('mitraresto_ref');
                     
-                    // Jika localStorage kosong, coba cari di currentUser
-                    if (!storedRef && currentUser && currentUser.affiliate_code) {
-                         // Ini fallback jika terjadi sesuatu dengan localStorage
-                         // Tetapi sebaiknya kita pastikan localStorage berfungsi
-                         console.warn("Menggunakan fallback affiliate_code dari user.");
+                    if (!storedRef) {
+                        console.log("Tidak ditemukan referral code di cookie maupun localStorage.");
                     }
                     
                     // Pastikan yang dikirim adalah string, bukan null
@@ -504,7 +523,8 @@
 
                     const response = await fetchAPI('saveOrder', { orderData: orderData });
                     if(response.success) {
-                        // Jika pesanan sukses dikirim, bersihkan localStorage ref
+                        // Jika pesanan sukses dikirim, bersihkan cookie & localStorage ref
+                        deleteCookie('mitraresto_ref');
                         localStorage.removeItem('mitraresto_ref');
                         
                         Swal.fire({ title: 'Pesanan Dibuat!', text: 'Kirimkan bukti transfer ke WA Admin.', icon: 'success' })
