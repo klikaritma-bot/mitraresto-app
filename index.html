@@ -342,15 +342,23 @@
 
         // LOGIKA PERHITUNGAN DOMPET MITRA YANG BENAR
         function renderAffiliateData() {
-            // 1. Hitung Uang Masuk (Dari Penjualan yg sudah Paid)
-            const myReferrals = globalDb.orders.filter(o => o.affiliate_code === currentUser.affiliate_code && o.payment_status === 'Paid');
+            // 1. Hitung Uang Masuk (Dari Penjualan yg sudah Paid - Kebal Typo & Spasi)
+            const myReferrals = globalDb.orders.filter(o => 
+                o.affiliate_code === currentUser.affiliate_code && 
+                o.payment_status && 
+                o.payment_status.toString().trim().toLowerCase() === 'paid'
+            );
             let totalCommission = 0;
             myReferrals.forEach(o => { totalCommission += parseInt(o.commission_amount) || 0; });
 
-            // 2. Hitung Uang Keluar (Dari Penarikan di tab Payouts)
+            // 2. Hitung Uang Keluar (Dari Penarikan di tab Payouts - Kebal Typo & Spasi)
             let totalWithdrawn = 0;
             if (globalDb.payouts) {
-                const myPayouts = globalDb.payouts.filter(p => p.user_id === currentUser.id && p.status === 'Completed');
+                const myPayouts = globalDb.payouts.filter(p => 
+                    p.user_id === currentUser.id && 
+                    p.status && 
+                    p.status.toString().trim().toLowerCase() === 'completed'
+                );
                 myPayouts.forEach(p => { totalWithdrawn += parseInt(p.amount) || 0; });
             }
 
