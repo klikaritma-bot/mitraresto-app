@@ -30,11 +30,13 @@
 </head>
 <body class="antialiased min-h-screen flex flex-col">
 
+    <!-- GLOBAL LOADER -->
     <div id="loader">
         <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-brand mb-4"></div>
         <div class="text-primary font-bold tracking-wide">Menghubungkan ke Server...</div>
     </div>
 
+    <!-- ================== TAMPILAN AUTH (LOGIN/REGISTER) ================== -->
     <div id="view-auth" class="flex-grow flex items-center justify-center p-4 hide relative overflow-hidden bg-primary">
         <div class="absolute top-0 right-0 w-96 h-96 bg-brand opacity-20 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
         <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-500 opacity-20 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2"></div>
@@ -83,6 +85,7 @@
         </div>
     </div>
 
+    <!-- ================== TAMPILAN DASHBOARD MEMBER ================== -->
     <div id="view-dashboard" class="flex-grow flex-col hide">
         
         <header class="bg-white border-b border-slate-200 sticky top-0 z-40">
@@ -157,6 +160,7 @@
         </main>
     </div>
 
+    <!-- ================== SCRIPT APLIKASI ================== -->
     <script>
         // ⚠️ MASUKKAN URL GOOGLE APPS SCRIPT ANDA DI SINI
         const API_URL = 'https://script.google.com/macros/s/AKfycbwlsYJRnCFa9SSYF5CXgzXWBffIALTNGtTcxTdwJ8y3LK53kyoMI5uabckjm12Z4IWBvw/exec';
@@ -179,15 +183,25 @@
             }
         }
 
-        window.onload = async () => {
-            // TANGKAP DAN SIMPAN KODE REFERAL KE MEMORI BROWSER
+        // =========================================================
+        // PENANGKAP REFERAL YANG LEBIH KUAT
+        // =========================================================
+        function captureReferral() {
             const urlParams = new URLSearchParams(window.location.search);
             const refCode = urlParams.get('ref');
+            
+            // Jika ada param ref di URL, simpan/timpa di memori localStorage
             if (refCode) {
                 localStorage.setItem('mitraresto_ref', refCode);
-                console.log("Kode referal ditangkap:", refCode); // Untuk debugging
+                console.log("Referal ditangkap dan disimpan:", refCode);
             }
+        }
 
+        window.onload = async () => {
+            // 1. Amankan parameter referal terlebih dahulu
+            captureReferral();
+
+            // 2. Cek sesi login
             const savedSession = localStorage.getItem('mitraresto_session');
             if (savedSession) {
                 currentUser = JSON.parse(savedSession);
@@ -222,6 +236,9 @@
             e.preventDefault();
             Swal.fire({title: 'Memeriksa...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
             
+            // Jaga-jaga tangkap URL lagi
+            captureReferral();
+            
             const email = document.getElementById('log-email').value;
             const pass = document.getElementById('log-pass').value;
             
@@ -240,6 +257,9 @@
             e.preventDefault();
             Swal.fire({title: 'Mendaftarkan Akun...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
             
+            // Jaga-jaga tangkap URL lagi sebelum data dikirim
+            captureReferral();
+
             const userData = {
                 id: "USR-" + Date.now().toString().slice(-4),
                 fullname: document.getElementById('reg-name').value,
@@ -278,16 +298,23 @@
             if (res && res.users) { 
                 globalDb.subscriptions = res.subscriptions || [];
                 globalDb.orders = res.orders || [];
-                globalDb.payouts = res.payouts || []; // Menambahkan data Payouts
+                globalDb.payouts = res.payouts || []; 
                 
                 renderSubscriptionData();
                 renderAffiliateData();
                 showView('dashboard');
                 
-                // AUTO TRIGGER CHECKOUT
+                // =========================================================
+                // AUTO TRIGGER CHECKOUT & PENGAMANAN URL
+                // =========================================================
                 const urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.get('buy') === 'setup') {
-                    window.history.replaceState({}, document.title, window.location.pathname);
+                    // JANGAN HAPUS SEMUA PARAMETER! Hanya hapus parameter ?buy=setup 
+                    // agar url ?ref=... tetap ada/tidak terhapus saat direfresh
+                    const currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.delete('buy');
+                    window.history.replaceState({}, document.title, currentUrl.pathname + currentUrl.search);
+                    
                     setTimeout(() => { paySetup(); }, 600);
                 }
                 
@@ -340,9 +367,11 @@
             `;
         }
 
-        // LOGIKA PERHITUNGAN DOMPET MITRA YANG BENAR
+        // =========================================================
+        // LOGIKA PERHITUNGAN DOMPET MITRA (KEBAL TYPO & SPASI)
+        // =========================================================
         function renderAffiliateData() {
-            // 1. Hitung Uang Masuk (Dari Penjualan yg sudah Paid - Kebal Typo & Spasi)
+            // 1. Hitung Uang Masuk (Penjualan dg status Paid)
             const myReferrals = globalDb.orders.filter(o => 
                 o.affiliate_code === currentUser.affiliate_code && 
                 o.payment_status && 
@@ -351,7 +380,7 @@
             let totalCommission = 0;
             myReferrals.forEach(o => { totalCommission += parseInt(o.commission_amount) || 0; });
 
-            // 2. Hitung Uang Keluar (Dari Penarikan di tab Payouts - Kebal Typo & Spasi)
+            // 2. Hitung Uang Keluar (Penarikan di tab Payouts dg status Completed)
             let totalWithdrawn = 0;
             if (globalDb.payouts) {
                 const myPayouts = globalDb.payouts.filter(p => 
@@ -414,6 +443,9 @@
             });
         }
 
+        // =========================================================
+        // PENGIRIMAN DATA CHECKOUT SETUP DENGAN REFERAL AMAN
+        // =========================================================
         function paySetup() {
             Swal.fire({
                 title: 'Aktivasi Toko Baru',
@@ -433,8 +465,17 @@
                 if (res.isConfirmed) {
                     Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                     
-                    // AMBIL KODE DARI MEMORI
-                    const storedRef = localStorage.getItem('mitraresto_ref');
+                    // Ambil referal dari Local Storage
+                    let storedRef = localStorage.getItem('mitraresto_ref');
+                    
+                    // Pertahanan Terakhir: Cek lagi dari URL jika localStorage kebetulan kosong
+                    if (!storedRef) {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        storedRef = urlParams.get('ref');
+                    }
+                    
+                    // Pastikan yang dikirim adalah string, bukan null
+                    const finalRef = storedRef ? storedRef : "";
 
                     const invoiceNum = "STP-" + Date.now().toString().slice(-4);
                     const orderData = { 
@@ -444,7 +485,10 @@
                         order_type: "Setup", 
                         total_amount: 99000, 
                         payment_status: "Pending", 
-                        affiliate_code: storedRef ? storedRef : "", // LOGIKA YANG BENAR
+                        
+                        // INI KUNCI UTAMANYA: Mengirim kode afiliator, bukan kode pembeli
+                        affiliate_code: finalRef, 
+                        
                         commission_amount: 0, 
                         created_at: new Date().toISOString().split('T')[0] 
                     };
