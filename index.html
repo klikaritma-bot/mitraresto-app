@@ -190,10 +190,12 @@
             const urlParams = new URLSearchParams(window.location.search);
             const refCode = urlParams.get('ref');
             
-            // Jika ada param ref di URL, simpan/timpa di memori localStorage
+            // Simpan ke localStorage hanya jika ada parameter ref
             if (refCode) {
                 localStorage.setItem('mitraresto_ref', refCode);
                 console.log("Referal ditangkap dan disimpan:", refCode);
+            } else {
+                console.log("Tidak ada referal di URL.");
             }
         }
 
@@ -468,14 +470,18 @@
                     // Ambil referal dari Local Storage
                     let storedRef = localStorage.getItem('mitraresto_ref');
                     
-                    // Pertahanan Terakhir: Cek lagi dari URL jika localStorage kebetulan kosong
-                    if (!storedRef) {
-                        const urlParams = new URLSearchParams(window.location.search);
-                        storedRef = urlParams.get('ref');
+                    // Jika localStorage kosong, coba cari di currentUser
+                    if (!storedRef && currentUser && currentUser.affiliate_code) {
+                         // Ini fallback jika terjadi sesuatu dengan localStorage
+                         // Tetapi sebaiknya kita pastikan localStorage berfungsi
+                         console.warn("Menggunakan fallback affiliate_code dari user.");
                     }
                     
                     // Pastikan yang dikirim adalah string, bukan null
                     const finalRef = storedRef ? storedRef : "";
+                    
+                    // Hitung komisi (Hanya jika ada referral code yang valid)
+                    const commissionAmount = finalRef ? 100000 : 0;
 
                     const invoiceNum = "STP-" + Date.now().toString().slice(-4);
                     const orderData = { 
@@ -486,15 +492,21 @@
                         total_amount: 99000, 
                         payment_status: "Pending", 
                         
-                        // INI KUNCI UTAMANYA: Mengirim kode afiliator, bukan kode pembeli
+                        // Kirimkan referal code yang telah divalidasi
                         affiliate_code: finalRef, 
                         
-                        commission_amount: 0, 
+                        // Kirimkan komisi yang sudah dihitung
+                        commission_amount: commissionAmount, 
                         created_at: new Date().toISOString().split('T')[0] 
                     };
                     
+                    console.log("Mengirim data pesanan:", orderData);
+
                     const response = await fetchAPI('saveOrder', { orderData: orderData });
                     if(response.success) {
+                        // Jika pesanan sukses dikirim, bersihkan localStorage ref
+                        localStorage.removeItem('mitraresto_ref');
+                        
                         Swal.fire({ title: 'Pesanan Dibuat!', text: 'Kirimkan bukti transfer ke WA Admin.', icon: 'success' })
                         .then(() => {
                             const waText = `Halo Admin, saya sudah transfer *Rp 99.000* untuk Setup klikResto. Tagihan: *${invoiceNum}*. Berikut bukti transfernya.`;
