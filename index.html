@@ -22,10 +22,11 @@
     </script>
     
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; color: #0f172a; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; color: #0f172a; scroll-behavior: smooth;}
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
         .hide { display: none !important; }
         #loader { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .gradient-text { background: linear-gradient(90deg, #102A51, #BA1E2D); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
     </style>
 </head>
 <body class="antialiased min-h-screen flex flex-col">
@@ -33,56 +34,225 @@
     <!-- GLOBAL LOADER -->
     <div id="loader">
         <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-brand mb-4"></div>
-        <div class="text-primary font-bold tracking-wide">Menghubungkan ke Server...</div>
+        <div class="text-primary font-bold tracking-wide">Memuat Sistem...</div>
     </div>
 
-    <!-- ================== TAMPILAN AUTH (LOGIN/REGISTER) ================== -->
-    <div id="view-auth" class="flex-grow flex items-center justify-center p-4 hide relative overflow-hidden bg-primary">
-        <div class="absolute top-0 right-0 w-96 h-96 bg-brand opacity-20 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
-        <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-500 opacity-20 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2"></div>
-
-        <div class="w-full max-w-md bg-white rounded-[2rem] shadow-2xl p-8 relative z-10">
-            <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center gap-2 mb-2">
-                    <i class="bi bi-shop-window text-brand text-3xl"></i>
-                    <span class="font-extrabold text-3xl tracking-tight text-primary">Mitra<span class="text-brand">Resto</span></span>
+    <!-- ================== TAMPILAN LANDING (BLUEPRINT) & AUTH ================== -->
+    <div id="view-landing" class="flex-grow flex-col hide">
+        
+        <!-- Navbar Public -->
+        <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="bi bi-shop-window text-brand text-2xl"></i>
+                    <span class="font-bold text-xl text-primary tracking-tight">Mitra<span class="text-brand">Resto</span></span>
                 </div>
-                <p class="text-gray-500 text-sm font-medium">Portal Kemitraan & Tagihan Pelanggan</p>
+                <div class="flex items-center gap-3">
+                    <a href="#solusi" class="hidden md:block text-sm font-semibold text-gray-500 hover:text-primary">Mengapa klikResto?</a>
+                    <a href="#peluang" class="hidden md:block text-sm font-semibold text-gray-500 hover:text-primary mr-4">Peluang Mitra</a>
+                    <button onclick="openAuthModal('login')" class="text-primary font-bold text-sm hover:underline">Masuk</button>
+                    <button onclick="openAuthModal('register')" class="bg-brand text-white px-5 py-2 rounded-full text-sm font-bold shadow-md hover:bg-red-700 transition">Daftar Partner</button>
+                </div>
             </div>
+        </header>
 
-            <div class="flex gap-2 mb-6 bg-slate-100 p-1.5 rounded-xl">
-                <button id="btn-tab-login" onclick="switchAuthTab('login')" class="w-1/2 py-2.5 rounded-lg font-bold text-sm bg-white text-primary shadow-sm transition">Masuk</button>
-                <button id="btn-tab-register" onclick="switchAuthTab('register')" class="w-1/2 py-2.5 rounded-lg font-bold text-sm text-gray-500 hover:text-gray-700 transition">Daftar Partner</button>
+        <!-- Hero Section -->
+        <section class="bg-primary text-white py-20 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-96 h-96 bg-brand opacity-20 rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3"></div>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+                <span class="bg-white/10 text-red-200 text-xs font-black uppercase px-3 py-1.5 rounded-full mb-4 inline-block tracking-wider">Peluang Kemitraan F&B</span>
+                <h1 class="text-4xl md:text-6xl font-extrabold mb-6 leading-tight">Resto Anda, Aplikasi Anda, <span class="text-brand bg-white px-2 rounded-lg">Untung Anda.</span></h1>
+                <p class="text-lg md:text-xl text-gray-300 mb-10 max-w-3xl mx-auto">klikResto adalah aplikasi kasir (POS) dan pemesanan online 100% milik resto UMKM tanpa potongan komisi sepeser pun. Bergabunglah sebagai Mitra dan raih komisi Rp 100.000 per setup toko baru.</p>
+                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                    <button onclick="openAuthModal('register')" class="bg-brand text-white px-8 py-4 rounded-full font-bold text-lg hover:brightness-110 shadow-lg shadow-red-500/30 transition">Mulai Jadi Mitra Sekarang</button>
+                    <a href="#solusi" class="bg-white/10 text-white border border-white/20 px-8 py-4 rounded-full font-bold text-lg hover:bg-white/20 transition">Pelajari Blueprint Bisnis</a>
+                </div>
             </div>
+        </section>
 
-            <form id="form-login" onsubmit="handleLogin(event)">
-                <div class="mb-4">
-                    <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Email Akun</label>
-                    <input type="email" id="log-email" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium transition">
+        <!-- Masalah UMKM F&B -->
+        <section id="solusi" class="py-20 bg-slate-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl font-extrabold text-primary mb-4">Mengapa Resto Butuh klikResto?</h2>
+                    <p class="text-gray-500">Membantu UMKM Kuliner keluar dari 3 masalah utama di era digital.</p>
                 </div>
-                <div class="mb-6">
-                    <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Kata Sandi</label>
-                    <input type="password" id="log-pass" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium transition">
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                        <div class="w-14 h-14 bg-red-100 text-brand rounded-2xl flex items-center justify-center text-2xl mb-6"><i class="bi bi-graph-down-arrow"></i></div>
+                        <h3 class="text-xl font-bold mb-3">Komisi Ojol Menggerus Margin</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">Potongan 15-30% per transaksi bisa mengubah untung jadi rugi per porsi. klikResto 0% komisi untuk melayani pelanggan sekitar & pelanggan setia.</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                        <div class="w-14 h-14 bg-blue-100 text-primary rounded-2xl flex items-center justify-center text-2xl mb-6"><i class="bi bi-database-fill-slash"></i></div>
+                        <h3 class="text-xl font-bold mb-3">Data Bukan Milik Resto</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">Riwayat pesanan tersimpan di platform ojol. Resto tidak bisa me-remarketing pelanggan. Di klikResto, data pelanggan mutlak milik resto.</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                        <div class="w-14 h-14 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-2xl mb-6"><i class="bi bi-pc-display"></i></div>
+                        <h3 class="text-xl font-bold mb-3">Aplikasi POS Mahal & Ribet</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">Sistem kasir lengkap harganya ratusan ribu per bulan, belum termasuk order online. klikResto flat dan berbasis web (tanpa install).</p>
+                    </div>
                 </div>
-                <button type="submit" class="w-full bg-primary text-white py-4 rounded-xl font-bold hover:bg-gray-800 shadow-lg shadow-blue-900/20 transition">Masuk ke Dashboard</button>
-            </form>
+            </div>
+        </section>
 
-            <form id="form-register" onsubmit="handleRegister(event)" class="hide">
-                <div class="mb-4">
-                    <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Nama Lengkap / Nama Resto</label>
-                    <input type="text" id="reg-name" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium">
+        <!-- Tabel Perbandingan -->
+        <section class="py-20 bg-white">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl font-extrabold text-primary text-center mb-12">Berani Diadu: klikResto vs Aplikasi Lain</h2>
+                <div class="overflow-x-auto bg-white rounded-3xl shadow-lg border border-slate-100">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-primary text-white">
+                                <th class="p-5 font-bold">Aspek</th>
+                                <th class="p-5 font-bold">Aplikasi Ojol (GoFood dll)</th>
+                                <th class="p-5 font-bold bg-brand text-center">klikResto</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr class="border-b border-slate-100 hover:bg-slate-50">
+                                <td class="p-5 font-bold text-gray-700">Komisi per transaksi</td>
+                                <td class="p-5 text-gray-500">15% - 30% per order</td>
+                                <td class="p-5 font-black text-brand text-center">0% (Tanpa Potongan)</td>
+                            </tr>
+                            <tr class="border-b border-slate-100 hover:bg-slate-50">
+                                <td class="p-5 font-bold text-gray-700">Kepemilikan Data</td>
+                                <td class="p-5 text-gray-500">Milik Platform</td>
+                                <td class="p-5 font-black text-brand text-center">Milik Resto Sepenuhnya</td>
+                            </tr>
+                            <tr class="border-b border-slate-100 hover:bg-slate-50">
+                                <td class="p-5 font-bold text-gray-700">Ongkir Delivery</td>
+                                <td class="p-5 text-gray-500">Diatur platform & kurir</td>
+                                <td class="p-5 font-black text-brand text-center">Diatur resto sendiri (radius 3-5 km)</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-5 font-bold text-gray-700">Tujuan Utama</td>
+                                <td class="p-5 text-gray-500">Mencari pelanggan jauh/baru</td>
+                                <td class="p-5 font-black text-brand text-center">Melayani pelanggan setia & dekat</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="mb-4">
-                    <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Email Valid</label>
-                    <input type="email" id="reg-email" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium">
+            </div>
+        </section>
+
+        <!-- Value Stack Setup -->
+        <section class="py-20 bg-slate-800 text-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h2 class="text-3xl font-extrabold mb-6">Bukan Sekadar Bayar Software, Tapi Beli <span class="text-brand">Branding!</span></h2>
+                    <p class="text-gray-400 mb-8 leading-relaxed">Biaya setup awal klikResto nilainya berkali-kali lipat dari sekadar aktivasi sistem. Klien langsung terima beres siap jualan.</p>
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-3"><i class="bi bi-check-circle-fill text-brand mt-1"></i> <div><span class="font-bold text-white">Setup Sistem</span> <span class="text-sm text-gray-400 block">Aplikasi kasir & order online siap pakai.</span></div></li>
+                        <li class="flex items-start gap-3"><i class="bi bi-check-circle-fill text-brand mt-1"></i> <div><span class="font-bold text-white">Desain 10 Item Produk</span> <span class="text-sm text-gray-400 block">Jasa desain senilai Rp 50rb/item di pasaran.</span></div></li>
+                        <li class="flex items-start gap-3"><i class="bi bi-check-circle-fill text-brand mt-1"></i> <div><span class="font-bold text-white">Desain 9 Feed IG</span> <span class="text-sm text-gray-400 block">Materi sosmed senilai ratusan ribu.</span></div></li>
+                        <li class="flex items-start gap-3"><i class="bi bi-check-circle-fill text-brand mt-1"></i> <div><span class="font-bold text-white">Desain Brosur Promosi</span> <span class="text-sm text-gray-400 block">Brosur fisik dengan QR Code aplikasi.</span></div></li>
+                    </ul>
                 </div>
-                <div class="mb-6">
-                    <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Buat Sandi</label>
-                    <input type="password" id="reg-pass" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium">
+                <div class="bg-white rounded-3xl p-8 text-primary shadow-2xl transform rotate-1">
+                    <h3 class="text-xl font-bold mb-2">Simulasi Biaya Asli di Pasaran:</h3>
+                    <div class="space-y-2 mb-6 text-sm text-gray-500 font-medium">
+                        <div class="flex justify-between border-b border-dashed pb-2"><span>Software POS F&B</span> <span>~Rp 250.000</span></div>
+                        <div class="flex justify-between border-b border-dashed pb-2"><span>Jasa 10 Desain Produk</span> <span>~Rp 500.000</span></div>
+                        <div class="flex justify-between border-b border-dashed pb-2"><span>Jasa Desain 9 Feed IG</span> <span>~Rp 450.000</span></div>
+                        <div class="flex justify-between border-b border-dashed pb-2"><span>Jasa Desain Brosur</span> <span>~Rp 150.000</span></div>
+                    </div>
+                    <div class="flex justify-between items-center bg-red-50 p-4 rounded-xl border border-red-100">
+                        <span class="font-bold text-red-900">Di klikResto HANYA:</span>
+                        <span class="text-3xl font-black text-brand">Rp 99.000*</span>
+                    </div>
+                    <p class="text-center text-[10px] text-gray-400 mt-2">*Biaya Setup Promo. Langganan bulan berikutnya hanya Rp 77rb/bln tanpa kontrak.</p>
                 </div>
-                <button type="submit" class="w-full bg-brand text-white py-4 rounded-xl font-bold hover:brightness-110 shadow-lg shadow-red-500/30 transition">Daftar Sekarang</button>
-            </form>
+            </div>
+        </section>
+
+        <!-- Peluang Affiliate / Reseller -->
+        <section id="peluang" class="py-20 bg-slate-50">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <i class="bi bi-cash-coin text-5xl text-brand mb-4 block"></i>
+                <h2 class="text-3xl font-extrabold text-primary mb-6">Program Reseller & Affiliate Resmi</h2>
+                <p class="text-gray-500 mb-10">Bantu UMKM kuliner di kota Anda naik kelas, dan dapatkan komisi uang tunai langsung setiap kali ada resto yang melakukan Setup.</p>
+                
+                <div class="bg-white rounded-3xl shadow-md border border-slate-100 p-8">
+                    <h3 class="text-2xl font-black text-primary mb-2">Komisi Rp 100.000 / Resto</h3>
+                    <p class="text-sm text-gray-400 mb-8">Targetkan penawaran ke komunitas UMKM & grup kuliner. Cukup referensikan 1 resto sebulan untuk balik modal langganan Anda sendiri.</p>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <span class="block font-bold text-gray-700 mb-1">1 Resto/bln</span>
+                            <span class="text-xl font-black text-brand">Rp 100.000</span>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <span class="block font-bold text-gray-700 mb-1">3 Resto/bln</span>
+                            <span class="text-xl font-black text-brand">Rp 300.000</span>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <span class="block font-bold text-gray-700 mb-1">5 Resto/bln</span>
+                            <span class="text-xl font-black text-brand">Rp 500.000</span>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <span class="block font-bold text-gray-700 mb-1">10 Resto/bln</span>
+                            <span class="text-xl font-black text-brand">Rp 1.000.000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Bawah -->
+        <section class="py-16 bg-primary text-center">
+            <h2 class="text-3xl font-extrabold text-white mb-6">Siap Menjual Kemerdekaan Digital F&B?</h2>
+            <button onclick="openAuthModal('register')" class="bg-brand text-white px-10 py-4 rounded-full font-bold text-lg hover:brightness-110 shadow-lg shadow-red-500/30 transition">Daftar Menjadi Mitra (Gratis)</button>
+        </section>
+
+        <!-- Modal Login/Register (Absolute Position) -->
+        <div id="auth-modal" class="fixed inset-0 bg-black/60 z-50 hide flex items-center justify-center p-4">
+            <div class="w-full max-w-md bg-white rounded-[2rem] shadow-2xl p-8 relative">
+                <button onclick="closeAuthModal()" class="absolute top-4 right-4 w-8 h-8 bg-slate-100 rounded-full text-gray-500 hover:text-brand"><i class="bi bi-x-lg"></i></button>
+                
+                <div class="text-center mb-6">
+                    <div class="inline-flex items-center justify-center gap-2 mb-2">
+                        <i class="bi bi-shop-window text-brand text-2xl"></i>
+                        <span class="font-extrabold text-2xl tracking-tight text-primary">Mitra<span class="text-brand">Resto</span></span>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 mb-6 bg-slate-100 p-1.5 rounded-xl">
+                    <button id="btn-tab-login" onclick="switchAuthTab('login')" class="w-1/2 py-2.5 rounded-lg font-bold text-sm bg-white text-primary shadow-sm transition">Masuk</button>
+                    <button id="btn-tab-register" onclick="switchAuthTab('register')" class="w-1/2 py-2.5 rounded-lg font-bold text-sm text-gray-500 hover:text-gray-700 transition">Daftar Partner</button>
+                </div>
+
+                <form id="form-login" onsubmit="handleLogin(event)">
+                    <div class="mb-4">
+                        <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Email Akun</label>
+                        <input type="email" id="log-email" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium transition">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Kata Sandi</label>
+                        <input type="password" id="log-pass" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium transition">
+                    </div>
+                    <button type="submit" class="w-full bg-primary text-white py-4 rounded-xl font-bold hover:bg-gray-800 shadow-lg transition">Masuk ke Dashboard</button>
+                </form>
+
+                <form id="form-register" onsubmit="handleRegister(event)" class="hide">
+                    <div class="mb-4">
+                        <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Nama Lengkap / Nama Resto</label>
+                        <input type="text" id="reg-name" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Email Valid</label>
+                        <input type="email" id="reg-email" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Buat Sandi</label>
+                        <input type="password" id="reg-pass" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium">
+                    </div>
+                    <button type="submit" class="w-full bg-brand text-white py-4 rounded-xl font-bold hover:brightness-110 shadow-lg shadow-red-500/30 transition">Daftar Sekarang</button>
+                </form>
+            </div>
         </div>
+
     </div>
 
     <!-- ================== TAMPILAN DASHBOARD MEMBER ================== -->
@@ -103,6 +273,7 @@
 
         <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
             
+            <!-- Promo Banner -->
             <div class="bg-gradient-to-r from-brand to-red-500 rounded-2xl p-6 text-white mb-8 shadow-lg shadow-red-500/20 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4">
                 <div class="absolute -right-10 -top-10 text-white/10 text-9xl">
                     <i class="bi bi-megaphone-fill"></i>
@@ -117,6 +288,7 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 
+                <!-- Kolom Kiri: Status Toko Pribadi -->
                 <div class="lg:col-span-7 space-y-6">
                     <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
                         <div class="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
@@ -132,6 +304,7 @@
                     </div>
                 </div>
 
+                <!-- Kolom Kanan: Dompet Mitra & Link -->
                 <div id="affiliate-section" class="lg:col-span-5 space-y-6">
                     <div class="bg-primary rounded-3xl p-6 shadow-xl text-white border border-gray-800">
                         <h3 class="text-xl font-bold mb-1">Dompet Mitra</h3>
@@ -184,45 +357,21 @@
         }
 
         // =========================================================
-        // COOKIE HELPER (LINTAS SUBDOMAIN *.kliksistem.com)
-        // =========================================================
-        // PENTING: localStorage terkunci per-domain (origin-scoped), jadi
-        // referral yang ditangkap di resto.kliksistem.com TIDAK bisa dibaca
-        // di mitraresto.kliksistem.com. Cookie dengan domain=.kliksistem.com
-        // bisa dibaca oleh SEMUA subdomain kliksistem.com.
-        function setCookie(name, value, days) {
-            const expires = new Date(Date.now() + days * 864e5).toUTCString();
-            document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; domain=.kliksistem.com; SameSite=Lax; Secure`;
-        }
-
-        function getCookie(name) {
-            const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-            return match ? decodeURIComponent(match[1]) : null;
-        }
-
-        function deleteCookie(name) {
-            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.kliksistem.com`;
-        }
-
-        // =========================================================
-        // PENANGKAP REFERAL YANG LEBIH KUAT (COOKIE LINTAS SUBDOMAIN)
+        // PENANGKAP REFERAL YANG LEBIH KUAT
         // =========================================================
         function captureReferral() {
             const urlParams = new URLSearchParams(window.location.search);
             const refCode = urlParams.get('ref');
             
-            // Simpan ke cookie (lintas subdomain) + localStorage (fallback same-origin)
+            // Jika ada param ref di URL, simpan/timpa di memori localStorage
             if (refCode) {
-                setCookie('mitraresto_ref', refCode, 30);
                 localStorage.setItem('mitraresto_ref', refCode);
-                console.log("Referal ditangkap dan disimpan (cookie + localStorage):", refCode);
-            } else {
-                console.log("Tidak ada referal baru di URL. Cek cookie/localStorage yang sudah ada.");
+                console.log("Referal ditangkap dan disimpan:", refCode);
             }
         }
 
         window.onload = async () => {
-            // 1. Amankan parameter referal terlebih dahulu
+            // 1. Amankan parameter referal terlebih dahulu di detik pertama
             captureReferral();
 
             // 2. Cek sesi login
@@ -231,15 +380,24 @@
                 currentUser = JSON.parse(savedSession);
                 await loadDashboardData();
             } else {
-                showView('auth');
+                showView('landing');
             }
         }
 
         function showView(viewId) {
             document.getElementById('loader').classList.add('hide');
-            document.getElementById('view-auth').classList.add('hide');
+            document.getElementById('view-landing').classList.add('hide');
             document.getElementById('view-dashboard').classList.add('hide');
             document.getElementById('view-' + viewId).classList.remove('hide');
+        }
+
+        // Logika Modal Auth di Halaman Landing
+        function openAuthModal(tab) {
+            document.getElementById('auth-modal').classList.remove('hide');
+            switchAuthTab(tab);
+        }
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('hide');
         }
 
         function switchAuthTab(tab) {
@@ -270,6 +428,7 @@
             if (res.success) {
                 currentUser = res.user;
                 localStorage.setItem('mitraresto_session', JSON.stringify(currentUser));
+                closeAuthModal();
                 Swal.close();
                 await loadDashboardData();
             } else {
@@ -298,6 +457,7 @@
             if (res.success) {
                 currentUser = res.user;
                 localStorage.setItem('mitraresto_session', JSON.stringify(currentUser));
+                closeAuthModal();
                 Swal.close();
                 await loadDashboardData();
             } else {
@@ -308,7 +468,7 @@
         function logout() {
             localStorage.removeItem('mitraresto_session');
             currentUser = null;
-            showView('auth');
+            showView('landing');
         }
 
         async function loadDashboardData() {
@@ -344,7 +504,7 @@
                 
             } else {
                 Swal.fire('Error', 'Gagal memuat data dari Database.', 'error');
-                showView('auth');
+                showView('landing');
             }
         }
         
@@ -489,17 +649,19 @@
                 if (res.isConfirmed) {
                     Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                     
-                    // Ambil referal: prioritas cookie (lintas subdomain), lalu localStorage (same-origin)
-                    let storedRef = getCookie('mitraresto_ref') || localStorage.getItem('mitraresto_ref');
+                    // Ambil referal dari Local Storage
+                    let storedRef = localStorage.getItem('mitraresto_ref');
                     
+                    // Pertahanan Terakhir: Cek lagi dari URL jika localStorage kebetulan kosong
                     if (!storedRef) {
-                        console.log("Tidak ditemukan referral code di cookie maupun localStorage.");
+                        const urlParams = new URLSearchParams(window.location.search);
+                        storedRef = urlParams.get('ref');
                     }
                     
                     // Pastikan yang dikirim adalah string, bukan null
                     const finalRef = storedRef ? storedRef : "";
                     
-                    // Hitung komisi (Hanya jika ada referral code yang valid)
+                    // HITUNG KOMISI DI FRONTEND: Jika ada referal = 100rb, jika tidak = 0
                     const commissionAmount = finalRef ? 100000 : 0;
 
                     const invoiceNum = "STP-" + Date.now().toString().slice(-4);
@@ -511,20 +673,20 @@
                         total_amount: 99000, 
                         payment_status: "Pending", 
                         
-                        // Kirimkan referal code yang telah divalidasi
+                        // INI KUNCI UTAMANYA: Mengirim kode afiliator, bukan kode pembeli
                         affiliate_code: finalRef, 
                         
-                        // Kirimkan komisi yang sudah dihitung
+                        // INI KUNCI KEDUA: Kirim nominal komisi yang sudah dihitung
                         commission_amount: commissionAmount, 
+                        
                         created_at: new Date().toISOString().split('T')[0] 
                     };
                     
-                    console.log("Mengirim data pesanan:", orderData);
-
+                    console.log("Mengirim data pesanan Setup:", orderData);
+                    
                     const response = await fetchAPI('saveOrder', { orderData: orderData });
                     if(response.success) {
-                        // Jika pesanan sukses dikirim, bersihkan cookie & localStorage ref
-                        deleteCookie('mitraresto_ref');
+                        // BERSIHKAN REFERAL SETELAH CHECKOUT SUKSES
                         localStorage.removeItem('mitraresto_ref');
                         
                         Swal.fire({ title: 'Pesanan Dibuat!', text: 'Kirimkan bukti transfer ke WA Admin.', icon: 'success' })
