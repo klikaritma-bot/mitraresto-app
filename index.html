@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -248,7 +248,7 @@
                         <label class="block font-bold text-xs text-gray-500 uppercase mb-2">Buat Sandi</label>
                         <input type="password" id="reg-pass" required class="w-full bg-slate-50 border border-slate-200 focus:border-brand rounded-xl p-3.5 outline-none font-medium">
                     </div>
-                    <button type="submit" class="w-full bg-brand text-white py-4 rounded-xl font-bold hover:brightness-110 shadow-lg shadow-red-500/30 transition">Daftar Sekarang</button>
+                    <button type="submit" class="w-full bg-brand text-white py-4 rounded-xl font-bold hover:brightness-110 shadow-lg shadow-red-500/30 transition">Lanjut Pembayaran</button>
                 </form>
             </div>
         </div>
@@ -341,6 +341,9 @@
         let currentUser = null;
         let globalDb = { subscriptions: [], orders: [], payouts: [] };
 
+        // Variabel penanda Jalur Tol (Express Checkout)
+        let isExpressMode = false;
+
         const formatRp = (angka) => "Rp " + new Intl.NumberFormat('id-ID').format(angka);
 
         async function fetchAPI(action, payload = {}) {
@@ -357,22 +360,33 @@
         }
 
         // =========================================================
-        // PENANGKAP REFERAL YANG LEBIH KUAT
+        // PENANGKAP REFERAL & JALUR TOL
         // =========================================================
-        function captureReferral() {
+        function captureUrlParameters() {
             const urlParams = new URLSearchParams(window.location.search);
             const refCode = urlParams.get('ref');
             
-            // Jika ada param ref di URL, simpan/timpa di memori localStorage
+            // Simpan referal jika ada
             if (refCode) {
                 localStorage.setItem('mitraresto_ref', refCode);
-                console.log("Referal ditangkap dan disimpan:", refCode);
+                console.log("Referal ditangkap:", refCode);
+            }
+
+            // Cek apakah masuk melalui Jalur Tol / Express
+            if (urlParams.get('action') === 'express' || urlParams.get('buy') === 'setup') {
+                isExpressMode = true;
+                
+                // Bersihkan URL agar rapi, tapi JANGAN hapus 'ref'
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.delete('action');
+                currentUrl.searchParams.delete('buy');
+                window.history.replaceState({}, document.title, currentUrl.pathname + currentUrl.search);
             }
         }
 
         window.onload = async () => {
-            // 1. Amankan parameter referal terlebih dahulu di detik pertama
-            captureReferral();
+            // 1. Amankan parameter URL (Ref & Express Mode)
+            captureUrlParameters();
 
             // 2. Cek sesi login
             const savedSession = localStorage.getItem('mitraresto_session');
@@ -380,7 +394,14 @@
                 currentUser = JSON.parse(savedSession);
                 await loadDashboardData();
             } else {
-                showView('landing');
+                // Jika belum login dan lewat Jalur Tol, langsung paksa buka form Register
+                if (isExpressMode) {
+                    showView('landing'); 
+                    openAuthModal('register');
+                } else {
+                    // Jika pengunjung biasa, tampilkan Beranda utuh
+                    showView('landing');
+                }
             }
         }
 
@@ -397,6 +418,10 @@
             switchAuthTab(tab);
         }
         function closeAuthModal() {
+            // Jika dalam Express Mode, mencegah modal ditutup secara manual 
+            // agar user fokus mendaftar. (Opsional: bisa dihilangkan jika terlalu memaksa)
+            if (isExpressMode) return Swal.fire('Lengkapi Data', 'Silakan daftar akun terlebih dahulu untuk melanjutkan proses Setup Toko.', 'info');
+            
             document.getElementById('auth-modal').classList.add('hide');
         }
 
@@ -418,9 +443,6 @@
             e.preventDefault();
             Swal.fire({title: 'Memeriksa...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
             
-            // Jaga-jaga tangkap URL lagi
-            captureReferral();
-            
             const email = document.getElementById('log-email').value;
             const pass = document.getElementById('log-pass').value;
             
@@ -428,7 +450,7 @@
             if (res.success) {
                 currentUser = res.user;
                 localStorage.setItem('mitraresto_session', JSON.stringify(currentUser));
-                closeAuthModal();
+                document.getElementById('auth-modal').classList.add('hide');
                 Swal.close();
                 await loadDashboardData();
             } else {
@@ -439,9 +461,6 @@
         async function handleRegister(e) {
             e.preventDefault();
             Swal.fire({title: 'Mendaftarkan Akun...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
-            
-            // Jaga-jaga tangkap URL lagi sebelum data dikirim
-            captureReferral();
 
             const userData = {
                 id: "USR-" + Date.now().toString().slice(-4),
@@ -457,8 +476,11 @@
             if (res.success) {
                 currentUser = res.user;
                 localStorage.setItem('mitraresto_session', JSON.stringify(currentUser));
-                closeAuthModal();
+                document.getElementById('auth-modal').classList.add('hide');
                 Swal.close();
+                
+                // Setelah register berhasil, muat dashboard.
+                // Jika isExpressMode = true, otomatis pop-up QRIS akan dipanggil di loadDashboardData
                 await loadDashboardData();
             } else {
                 Swal.fire('Pendaftaran Gagal', res.message, 'error');
@@ -475,7 +497,7 @@
             document.getElementById('loader').classList.remove('hide');
             document.getElementById('user-greeting').innerText = `Halo, ${currentUser.fullname.split(' ')[0]}`;
             
-            document.getElementById('ref-link').value = `https://resto.kliksistem.com/?ref=${currentUser.affiliate_code}`;
+            document.getElementById('ref-link').value = `https://mitraresto.kliksistem.com/?ref=${currentUser.affiliate_code}`;
 
             const res = await fetchAPI('getAllData');
             
@@ -489,17 +511,12 @@
                 showView('dashboard');
                 
                 // =========================================================
-                // AUTO TRIGGER CHECKOUT & PENGAMANAN URL
+                // AUTO TRIGGER CHECKOUT (JALUR TOL)
                 // =========================================================
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('buy') === 'setup') {
-                    // JANGAN HAPUS SEMUA PARAMETER! Hanya hapus parameter ?buy=setup 
-                    // agar url ?ref=... tetap ada/tidak terhapus saat direfresh
-                    const currentUrl = new URL(window.location.href);
-                    currentUrl.searchParams.delete('buy');
-                    window.history.replaceState({}, document.title, currentUrl.pathname + currentUrl.search);
-                    
+                if (isExpressMode) {
                     setTimeout(() => { paySetup(); }, 600);
+                    // Matikan trigger setelah jalan agar tidak muncul lagi jika di-refresh
+                    isExpressMode = false; 
                 }
                 
             } else {
@@ -552,10 +569,10 @@
         }
 
         // =========================================================
-        // LOGIKA PERHITUNGAN DOMPET MITRA (KEBAL TYPO & SPASI)
+        // LOGIKA PERHITUNGAN DOMPET MITRA YANG BENAR
         // =========================================================
         function renderAffiliateData() {
-            // 1. Hitung Uang Masuk (Penjualan dg status Paid)
+            // 1. Hitung Uang Masuk (Dari Penjualan yg sudah Paid - Kebal Typo & Spasi)
             const myReferrals = globalDb.orders.filter(o => 
                 o.affiliate_code === currentUser.affiliate_code && 
                 o.payment_status && 
@@ -564,7 +581,7 @@
             let totalCommission = 0;
             myReferrals.forEach(o => { totalCommission += parseInt(o.commission_amount) || 0; });
 
-            // 2. Hitung Uang Keluar (Penarikan di tab Payouts dg status Completed)
+            // 2. Hitung Uang Keluar (Dari Penarikan di tab Payouts - Kebal Typo & Spasi)
             let totalWithdrawn = 0;
             if (globalDb.payouts) {
                 const myPayouts = globalDb.payouts.filter(p => 
@@ -650,18 +667,9 @@
                     Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                     
                     // Ambil referal dari Local Storage
-                    let storedRef = localStorage.getItem('mitraresto_ref');
+                    let finalRef = localStorage.getItem('mitraresto_ref') || "";
                     
-                    // Pertahanan Terakhir: Cek lagi dari URL jika localStorage kebetulan kosong
-                    if (!storedRef) {
-                        const urlParams = new URLSearchParams(window.location.search);
-                        storedRef = urlParams.get('ref');
-                    }
-                    
-                    // Pastikan yang dikirim adalah string, bukan null
-                    const finalRef = storedRef ? storedRef : "";
-                    
-                    // HITUNG KOMISI DI FRONTEND: Jika ada referal = 100rb, jika tidak = 0
+                    // Hitung komisi di Frontend: Ada ref = 100rb, tidak ada = 0
                     const commissionAmount = finalRef ? 100000 : 0;
 
                     const invoiceNum = "STP-" + Date.now().toString().slice(-4);
@@ -673,16 +681,14 @@
                         total_amount: 99000, 
                         payment_status: "Pending", 
                         
-                        // INI KUNCI UTAMANYA: Mengirim kode afiliator, bukan kode pembeli
+                        // Mengirim kode afiliator, bukan kode pembeli
                         affiliate_code: finalRef, 
                         
-                        // INI KUNCI KEDUA: Kirim nominal komisi yang sudah dihitung
+                        // Kirim nominal komisi yang sudah dihitung
                         commission_amount: commissionAmount, 
                         
                         created_at: new Date().toISOString().split('T')[0] 
                     };
-                    
-                    console.log("Mengirim data pesanan Setup:", orderData);
                     
                     const response = await fetchAPI('saveOrder', { orderData: orderData });
                     if(response.success) {
